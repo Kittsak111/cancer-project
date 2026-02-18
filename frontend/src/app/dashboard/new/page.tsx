@@ -464,7 +464,7 @@ export default function NewProjectPage() {
                 setIsSingleEditing(false);
                 // 2วิ แล้ว redirect ไปหน้าหลัก
                 setTimeout(() => {
-                    router.push("/");
+                    router.push("/dashboard");
                 }, 2000);
             } else {
                 const errData = await res.json().catch(() => ({}));
