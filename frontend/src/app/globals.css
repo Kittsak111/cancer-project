@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+  }
+  
+  /* กำหนดสีเมื่ออยู่ใน Dark Mode */
+  .dark body {
+    @apply bg-slate-900 text-white;
+  }
+}
+
+/* (แถม) ตกแต่ง Scrollbar ให้สวยงาม */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
