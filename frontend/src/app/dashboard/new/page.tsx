@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
     UploadCloud,
     Loader2,
@@ -398,6 +399,7 @@ const AnalysisForm = ({ form, setForm, disabled, title = "1. ข้อมูล�
 // ==========================================
 
 export default function NewProjectPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<'single' | 'batch'>('single');
     const [isProcessing, setIsProcessing] = useState(false);
     const [inspectorOpen, setInspectorOpen] = useState(false);
@@ -413,13 +415,13 @@ export default function NewProjectPage() {
     const [isSingleEditing, setIsSingleEditing] = useState(true); // Default = Edit Enabled
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [savedProjectId, setSavedProjectId] = useState<number | null>(null);
 
-    // Function: Save project to database
+    // Function: Save project to database (ป้องกันซ้ำ — ถ้าเคยบันทึกแล้วจะ update แทน)
     const saveSingleProject = async () => {
         setIsSaving(true);
         setSaveSuccess(false);
         try {
-            // เก็บเฉพาะข้อมูลวิเคราะห์ (ไม่เอา base64 image ที่ใหญ่มาก)
             const resultToSave = singleData ? {
                 cell_count: singleData.cell_count,
                 confluence: singleData.confluence,
@@ -430,21 +432,40 @@ export default function NewProjectPage() {
                 detections: singleData.detections,
             } : null;
 
-            const res = await fetch("/api/projects", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: singleForm.name || "Untitled Project",
-                    drugName: singleForm.drug || null,
-                    concentration: singleForm.conc || null,
-                    description: singleForm.desc || null,
-                    result: resultToSave ? JSON.stringify(resultToSave) : null,
-                }),
-            });
+            const payload = {
+                name: singleForm.name || "Untitled Project",
+                drugName: singleForm.drug || null,
+                concentration: singleForm.conc || null,
+                description: singleForm.desc || null,
+                result: resultToSave ? JSON.stringify(resultToSave) : null,
+            };
+
+            let res;
+            if (savedProjectId) {
+                // อัปเดตโปรเจกต์ที่เคยบันทึกแล้ว
+                res = await fetch(`/api/projects/${savedProjectId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+            } else {
+                // สร้างใหม่
+                res = await fetch("/api/projects", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+            }
+
             if (res.ok) {
+                const data = await res.json();
+                setSavedProjectId(data.id);
                 setSaveSuccess(true);
                 setIsSingleEditing(false);
-                setTimeout(() => setSaveSuccess(false), 3000);
+                // 2วิ แล้ว redirect ไปหน้าหลัก
+                setTimeout(() => {
+                    router.push("/");
+                }, 2000);
             } else {
                 const errData = await res.json().catch(() => ({}));
                 alert("บันทึกไม่สำเร็จ: " + (errData.error || "Unknown error"));
