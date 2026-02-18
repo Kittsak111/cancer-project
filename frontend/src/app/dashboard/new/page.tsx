@@ -419,6 +419,17 @@ export default function NewProjectPage() {
         setIsSaving(true);
         setSaveSuccess(false);
         try {
+            // เก็บเฉพาะข้อมูลวิเคราะห์ (ไม่เอา base64 image ที่ใหญ่มาก)
+            const resultToSave = singleData ? {
+                cell_count: singleData.cell_count,
+                confluence: singleData.confluence,
+                avg_size: singleData.avg_size,
+                size_distribution: singleData.size_distribution,
+                width: singleData.width,
+                height: singleData.height,
+                detections: singleData.detections,
+            } : null;
+
             const res = await fetch("/api/projects", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -427,7 +438,7 @@ export default function NewProjectPage() {
                     drugName: singleForm.drug || null,
                     concentration: singleForm.conc || null,
                     description: singleForm.desc || null,
-                    result: singleData ? JSON.stringify(singleData) : null,
+                    result: resultToSave ? JSON.stringify(resultToSave) : null,
                 }),
             });
             if (res.ok) {
@@ -435,7 +446,8 @@ export default function NewProjectPage() {
                 setIsSingleEditing(false);
                 setTimeout(() => setSaveSuccess(false), 3000);
             } else {
-                alert("บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");
+                const errData = await res.json().catch(() => ({}));
+                alert("บันทึกไม่สำเร็จ: " + (errData.error || "Unknown error"));
             }
         } catch (error) {
             alert("เกิดข้อผิดพลาดในการบันทึก");
