@@ -1,48 +1,46 @@
 import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-// ข้อมูลจำลอง (Mock Data)
-let MOCK_DB: any[] = [
-  {
-    id: 101,
-    name: "การทดลองยา Cisplatin (ตัวอย่าง)",
-    drugName: "Cisplatin",
-    concentration: "10",
-    description: "ตัวอย่างข้อมูล Mock Data สำหรับการนำเสนอ",
-    createdAt: new Date().toISOString(),
-    result: JSON.stringify({
-      cell_count: 125,
-      confluence: 45.5,
-      avg_size: 320.2,
-      size_distribution: { Small: 30, Medium: 60, Large: 35 },
-      // ใส่รูป Base64 หลอกๆ หรือว่างไว้ก็ได้
-      processed_image: "", 
-      original_image: ""
-    })
-  }
-];
+const prisma = new PrismaClient();
 
 export async function GET() {
-  return NextResponse.json(MOCK_DB);
+  try {
+    const projects = await prisma.project.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    return NextResponse.json(projects);
+  } catch (error) {
+    console.error("GET projects error:", error);
+    return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    // จำลองการหน่วงเวลา (เหมือนกำลังบันทึกจริง)
-    await new Promise(resolve => setTimeout(resolve, 800));
 
-    const newProject = {
-      id: Math.floor(Math.random() * 10000) + 100, // สุ่ม ID
-      ...body,
-      createdAt: new Date().toISOString()
-    };
-    
-    // บันทึกลงตัวแปร (รีเฟรชหน้าเว็บหายนะ เพราะไม่ได้ลง DB จริง)
-    MOCK_DB.unshift(newProject);
+    // สร้าง default user ถ้ายังไม่มี
+    const defaultUser = await prisma.user.upsert({
+      where: { email: "default@cancer-ai.app" },
+      update: {},
+      create: { email: "default@cancer-ai.app", name: "Default User", password: "default" },
+    });
+
+    const newProject = await prisma.project.create({
+      data: {
+        name: body.name || "Untitled",
+        drugName: body.drugName || null,
+        concentration: body.concentration || null,
+        description: body.description || null,
+        result: body.result || null,
+        userId: defaultUser.id,
+      },
+    });
 
     return NextResponse.json(newProject);
   } catch (error) {
-    return NextResponse.json({ error: "Mock Save Failed" }, { status: 500 });
+    console.error("POST project error:", error);
+    return NextResponse.json({ error: "Failed to save project" }, { status: 500 });
   }
 }

@@ -411,6 +411,38 @@ export default function NewProjectPage() {
     const [singleData, setSingleData] = useState<any>(null);
     const [singleForm, setSingleForm] = useState({ name: "", drug: "", conc: "", desc: "" });
     const [isSingleEditing, setIsSingleEditing] = useState(true); // Default = Edit Enabled
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Function: Save project to database
+    const saveSingleProject = async () => {
+        setIsSaving(true);
+        setSaveSuccess(false);
+        try {
+            const res = await fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: singleForm.name || "Untitled Project",
+                    drugName: singleForm.drug || null,
+                    concentration: singleForm.conc || null,
+                    description: singleForm.desc || null,
+                    result: singleData ? JSON.stringify(singleData) : null,
+                }),
+            });
+            if (res.ok) {
+                setSaveSuccess(true);
+                setIsSingleEditing(false);
+                setTimeout(() => setSaveSuccess(false), 3000);
+            } else {
+                alert("บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง");
+            }
+        } catch (error) {
+            alert("เกิดข้อผิดพลาดในการบันทึก");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     // Batch Mode State
     const [batchDefaults, setBatchDefaults] = useState({ name: "", drug: "", conc: "", desc: "" });
@@ -692,11 +724,12 @@ export default function NewProjectPage() {
                                             <Edit2 className="w-4 h-4" /> แก้ไขข้อมูล
                                         </button>
                                         <button
-                                            onClick={() => setIsSingleEditing(false)}
-                                            disabled={!isSingleEditing}
-                                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${!isSingleEditing ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'}`}
+                                            onClick={saveSingleProject}
+                                            disabled={!isSingleEditing || isSaving}
+                                            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all ${(!isSingleEditing || isSaving) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700 shadow-md'}`}
                                         >
-                                            <Save className="w-4 h-4" /> บันทึกข้อมูล
+                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                            {isSaving ? "กำลังบันทึก..." : saveSuccess ? "✅ บันทึกแล้ว!" : "บันทึกข้อมูล"}
                                         </button>
                                     </div>
                                 </div>
